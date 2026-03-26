@@ -1,0 +1,6 @@
+fix bilingual toggle: tool view and options update on language switch
+
+- openTool() uses currentLang for title/desc/placeholder
+- buildOptions() uses data-i18n/data-i18n-opt/data-i18n-placeholder for labels
+- applyLang() handles placeholder/opt attrs and rebuilds inOps HTML when ct is set
+- I18N expanded with regex/diff option label/placeholder keys
