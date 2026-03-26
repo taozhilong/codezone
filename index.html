@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
   <meta charset="UTF-8">
@@ -92,10 +92,10 @@
   <a class="bk" onclick="showHome();return false" data-i18n="back_to_tools">← 返回</a>
   <div class="th"><h2 id="tt" data-i18n="tool_title">工具</h2><p id="td" data-i18n="tool_desc">描述</p></div>
   <div class="op" id="inOps"></div>
-  <textarea id="input" placeholder="输入内容..."></textarea>
+  <textarea id="input" placeholder=""></textarea>
   <div style="margin-top:12px">
-    <button class="btn btn-p" id="actBtn" onclick="doAction()">执行</button>
-    <button class="btn btn-s" onclick="clearAll()">清空</button>
+    <button class="btn btn-p" id="actBtn" onclick="doAction()" data-i18n="btn_execute">执行</button>
+    <button class="btn btn-s" onclick="clearAll()" data-i18n="btn_clear">清空</button>
   </div>
   <div id="result"></div>
 </div>
@@ -119,27 +119,29 @@ const T={
 
 function showHome(){document.getElementById('home-view').style.display='block';document.getElementById('tv').classList.remove('act');ct=null;}
 function openTool(id){
-  ct=id;const t=T[id];
+  ct=id;const t=T[id],L=I18N[currentLang];
   document.getElementById('home-view').style.display='none';
   document.getElementById('tv').classList.add('act');
   document.getElementById('tt').textContent=t.title[currentLang];
   document.getElementById('td').textContent=t.desc[currentLang];
   const ops=document.getElementById('inOps');
   let h='';
-  if(id==='regex') h=`<div class="or"><input type="text" id="pattern" class="wid" data-i18n-placeholder="regex_pattern_ph" placeholder="正则表达式，如 \d+"></div><div class="or"><label><input type="checkbox" id="flagg" checked data-i18n-opt="regex_flag_g">全局匹配</label><label style="margin-left:10px"><input type="checkbox" id="flagi" data-i18n-opt="regex_flag_i">忽略大小写</label></div>`;
+  if(id==='regex') h=`<div class="or"><input type="text" id="pattern" class="wid" placeholder="${L.regex_pattern_ph}"></div><div class="or"><label><input type="checkbox" id="flagg" checked>${L.regex_flag_g}</label><label style="margin-left:10px"><input type="checkbox" id="flagi">${L.regex_flag_i}</label></div>`;
   if(id==='hash') h=`<div class="or"><select id="htype"><option value="md5">MD5</option><option value="sha1">SHA1</option><option value="sha256">SHA-256</option></select></div>`;
-  if(id==='uuid') h=`<div class="or"><button class="btn btn-p" onclick="genUUID()" data-i18n="uuid_generate">生成 UUID</button></div>`;
-  if(id==='diff') h=`<div class="or"><textarea id="input2" data-i18n-placeholder="diff_input2_ph" placeholder="第二段文本..." style="min-height:100px"></textarea></div>`;
+  if(id==='uuid') h=`<div class="or"><button class="btn btn-p" onclick="genUUID()">${L.uuid_generate}</button></div>`;
+  if(id==='diff') h=`<div class="or"><textarea id="input2" placeholder="${L.diff_input2_ph}" style="min-height:100px"></textarea></div>`;
   ops.innerHTML=h;
   document.getElementById('input').style.display=id==='uuid'?'none':'block';
   document.getElementById('input').value='';
-  document.getElementById('input').placeholder=id==='json'?(currentLang==='zh'?'输入 JSON':'Enter JSON'):id==='regex'?(currentLang==='zh'?'输入要匹配的文本':'Enter text to match'):(currentLang==='zh'?'输入内容':'Enter content');
+  const ph=id==='json'?L.placeholder_json:id==='regex'?L.placeholder_regex:L.placeholder_default;
+  document.getElementById('input').placeholder=ph;
   document.getElementById('result').innerHTML='';
 }
 
 async function doAction(){
   const inp=document.getElementById('input').value;
   const result=document.getElementById('result');
+  const L=I18N[currentLang];
   result.innerHTML='';
   try{
     switch(ct){
@@ -152,32 +154,34 @@ async function doAction(){
         const flag=(document.getElementById('flagg').checked?'g':'')+(document.getElementById('flagi').checked?'i':'');
         const re=new RegExp(pat,flag);
         const matches=inp.match(re);
-        result.innerHTML=`<div class="result">找到 ${matches?matches.length:0} 个匹配：\n${matches?matches.join('\n'):'无'}</div>`;
+        const n=matches?matches.length:0;
+        const label=L.regex_matches.replace('${n}',n);
+        result.innerHTML=`<div class="result">${label}\n${matches?matches.join('\n'):L.regex_no_match}</div>`;
         break;
       case 'base64':
         try{
           result.innerHTML=`<div class="result">${btoa(unescape(encodeURIComponent(inp)))}</div>`;
         }catch{
-          result.innerHTML=`<div class="result">解码：${decodeURIComponent(escape(atob(inp)))}</div>`;
+          result.innerHTML=`<div class="result">${L.b64_decoded}${decodeURIComponent(escape(atob(inp)))}</div>`;
         }
         break;
       case 'url':
-        result.innerHTML=`<div class="result">编码：${encodeURIComponent(inp)}\n解码：${decodeURIComponent(inp)}</div>`;
+        result.innerHTML=`<div class="result">${L.url_encoded}${encodeURIComponent(inp)}\n${L.url_decoded}${decodeURIComponent(inp)}</div>`;
         break;
       case 'color':
         const c=parseColor(inp);
         if(c) result.innerHTML=`<div class="result">HEX: ${c.hex}\nRGB: rgb(${c.r},${c.g},${c.b})\nHSL: hsl(${c.h},${c.s}%,${c.l}%)</div>`;
-        else result.innerHTML=`<div class="error">无效的颜色格式</div>`;
+        else result.innerHTML=`<div class="error">${L.err_invalid_color}</div>`;
         break;
       case 'hash':
-        result.innerHTML=`<div class="result">正在生成 ${document.getElementById('htype').value}...</div>`;
-        result.innerHTML=`<div class="result" id="hashOut">计算中...</div>`;
+        result.innerHTML=`<div class="result">${L.hash_computing.replace('${t}',document.getElementById('htype').value)}</div>`;
+        result.innerHTML=`<div class="result" id="hashOut">${L.hash_done}</div>`;
         const h=await hash(inp,document.getElementById('htype').value);
         document.getElementById('hashOut').textContent=h;
         break;
       case 'jwt':
         const parts=inp.split('.');
-        if(parts.length!==3) throw new Error('无效的 JWT 格式');
+        if(parts.length!==3) throw new Error(L.err_invalid_jwt);
         const header=JSON.parse(atob(parts[0]));
         const payload=JSON.parse(atob(parts[1]));
         result.innerHTML=`<div class="result"><b>Header:</b>\n${JSON.stringify(header,null,2)}\n\n<b>Payload:</b>\n${JSON.stringify(payload,null,2)}</div>`;
@@ -188,11 +192,11 @@ async function doAction(){
         for(let i=0;i<Math.max(t1.length,t2.length);i++){
           if(t1[i]!==t2[i]) diff+=(t1[i]?'- '+t1[i]:'- ')+'\n'+(t2[i]?'+ '+t2[i]:'+ ')+'\n\n';
         }
-        result.innerHTML=`<div class="result">${diff||'两段文本相同'}</div>`;
+        result.innerHTML=`<div class="result">${diff||L.diff_same}</div>`;
         break;
     }
   }catch(e){
-    result.innerHTML=`<div class="error">错误：${e.message}</div>`;
+    result.innerHTML=`<div class="error">${L.err_prefix}${e.message}</div>`;
   }
 }
 
@@ -243,31 +247,92 @@ function clearAll(){
 }
 
 const I18N={
-  zh:{hero_tag:'完全免费 · 无需注册 · 隐私安全',hero_title:'免费在线开发者工具箱',hero_desc:'JSON格式化、正则测试、Base64、URL编解码、颜色转换<br>所有操作在浏览器完成，文件永不离开你的设备',json_title:'JSON 格式化',json_desc:'格式化并验证 JSON',regex_title:'正则测试',regex_desc:'测试正则表达式',base64_title:'Base64',base64_desc:'Base64 编码/解码',url_title:'URL 编解码',url_desc:'URL 特殊字符编码',color_title:'颜色转换',color_desc:'HEX / RGB / HSL 互转',hash_title:'Hash 生成',hash_desc:'MD5/SHA1/SHA256',jwt_title:'JWT 解码',jwt_desc:'解码 JSON Web Token',uuid_title:'UUID 生成',uuid_desc:'生成随机 UUID',cron_title:'Cron 解析',cron_desc:'解析 Cron 表达式',diff_title:'文本对比',diff_desc:'对比两段文本差异',tool_title:'工具',tool_desc:'描述',regex_pattern_ph:'正则表达式，如 \d+',regex_flag_g:'全局匹配',regex_flag_i:'忽略大小写',uuid_generate:'生成 UUID',placeholder_json:'输入 JSON',placeholder_regex:'输入要匹配的文本',placeholder_default:'输入内容',diff_input2_ph:'第二段文本...',back_to_tools:'← 返回',btn_execute:'执行',btn_clear:'清空',processing:'处理中...'},
-  en:{hero_tag:'100% Free · No Registration · Privacy Safe',hero_title:'Free Online Developer Toolkit',hero_desc:'JSON formatter, regex tester, Base64, URL encode/decode, color converter<br>All processing in browser, files never leave your device',json_title:'JSON Format',json_desc:'Format and validate JSON',regex_title:'Regex Tester',regex_desc:'Test regular expressions',base64_title:'Base64',base64_desc:'Base64 encode/decode',url_title:'URL Encode/Decode',url_desc:'URL special character encoding',color_title:'Color Converter',color_desc:'Convert between HEX / RGB / HSL',hash_title:'Hash Generator',hash_desc:'MD5/SHA1/SHA256',jwt_title:'JWT Decode',jwt_desc:'Decode JSON Web Token',uuid_title:'UUID Generator',uuid_desc:'Generate random UUID',cron_title:'Cron Parser',cron_desc:'Parse Cron expressions',diff_title:'Text Diff',diff_desc:'Compare two text differences',tool_title:'Tool',tool_desc:'Description',regex_pattern_ph:'Regex pattern, e.g. \d+',regex_flag_g:'Global match',regex_flag_i:'Case insensitive',uuid_generate:'Generate UUID',placeholder_json:'Enter JSON',placeholder_regex:'Enter text to match',placeholder_default:'Enter content',diff_input2_ph:'Second text...',back_to_tools:'← Back',btn_execute:'Execute',btn_clear:'Clear',processing:'Processing...'}
+  zh:{
+    hero_tag:'完全免费 · 无需注册 · 隐私安全',
+    hero_title:'免费在线开发者工具箱',
+    hero_desc:'JSON格式化、正则测试、Base64、URL编解码、颜色转换<br>所有操作在浏览器完成，文件永不离开你的设备',
+    json_title:'JSON 格式化',json_desc:'格式化并验证 JSON',
+    regex_title:'正则测试',regex_desc:'测试正则表达式',
+    base64_title:'Base64',base64_desc:'Base64 编码/解码',
+    url_title:'URL 编解码',url_desc:'URL 特殊字符编码',
+    color_title:'颜色转换',color_desc:'HEX / RGB / HSL 互转',
+    hash_title:'Hash 生成',hash_desc:'MD5/SHA1/SHA256',
+    jwt_title:'JWT 解码',jwt_desc:'解码 JSON Web Token',
+    uuid_title:'UUID 生成',uuid_desc:'生成随机 UUID',
+    cron_title:'Cron 解析',cron_desc:'解析 Cron 表达式',
+    diff_title:'文本对比',diff_desc:'对比两段文本差异',
+    tool_title:'工具',tool_desc:'描述',
+    placeholder_json:'输入 JSON',placeholder_regex:'输入要匹配的文本',placeholder_default:'输入内容',
+    regex_pattern_ph:'正则表达式，如 \\d+',regex_flag_g:'全局匹配',regex_flag_i:'忽略大小写',
+    uuid_generate:'生成 UUID',diff_input2_ph:'第二段文本...',
+    back_to_tools:'← 返回',btn_execute:'执行',btn_clear:'清空',processing:'处理中...',
+    regex_matches:'找到 ${n} 个匹配：',regex_no_match:'无',
+    b64_decoded:'解码：',url_encoded:'编码：',url_decoded:'解码：',
+    err_invalid_color:'无效的颜色格式',
+    hash_computing:'正在生成 ${t}...',hash_done:'计算中...',
+    err_invalid_jwt:'无效的 JWT 格式',
+    diff_same:'两段文本相同',err_prefix:'错误：'
+  },
+  en:{
+    hero_tag:'100% Free · No Registration · Privacy Safe',
+    hero_title:'Free Online Developer Toolkit',
+    hero_desc:'JSON formatter, regex tester, Base64, URL encode/decode, color converter<br>All processing in browser, files never leave your device',
+    json_title:'JSON Format',json_desc:'Format and validate JSON',
+    regex_title:'Regex Tester',regex_desc:'Test regular expressions',
+    base64_title:'Base64',base64_desc:'Base64 encode/decode',
+    url_title:'URL Encode/Decode',url_desc:'URL special character encoding',
+    color_title:'Color Converter',color_desc:'Convert between HEX / RGB / HSL',
+    hash_title:'Hash Generator',hash_desc:'MD5/SHA1/SHA256',
+    jwt_title:'JWT Decode',jwt_desc:'Decode JSON Web Token',
+    uuid_title:'UUID Generator',uuid_desc:'Generate random UUID',
+    cron_title:'Cron Parser',cron_desc:'Parse Cron expressions',
+    diff_title:'Text Diff',diff_desc:'Compare two text differences',
+    tool_title:'Tool',tool_desc:'Description',
+    placeholder_json:'Enter JSON',placeholder_regex:'Enter text to match',placeholder_default:'Enter content',
+    regex_pattern_ph:'Regex pattern, e.g. \\d+',regex_flag_g:'Global match',regex_flag_i:'Case insensitive',
+    uuid_generate:'Generate UUID',diff_input2_ph:'Second text...',
+    back_to_tools:'← Back',btn_execute:'Execute',btn_clear:'Clear',processing:'Processing...',
+    regex_matches:'Found ${n} matches:',regex_no_match:'none',
+    b64_decoded:'Decoded:',url_encoded:'Encoded:',url_decoded:'Decoded:',
+    err_invalid_color:'Invalid color format',
+    hash_computing:'Generating ${t}...',hash_done:'Computing...',
+    err_invalid_jwt:'Invalid JWT format',
+    diff_same:'Texts are identical',err_prefix:'Error:'
+  }
 };
 let currentLang='zh';
-function toggleLang(){currentLang=currentLang==='zh'?'en':'zh';applyLang();localStorage.setItem('codezone_lang',currentLang);document.getElementById('langBtn').textContent=currentLang==='zh'?'🌐 EN':'🌐 中';}
+function toggleLang(){
+  currentLang=currentLang==='zh'?'en':'zh';
+  applyLang();
+  localStorage.setItem('codezone_lang',currentLang);
+  document.getElementById('langBtn').textContent=currentLang==='zh'?'🌐 EN':'🌐 中';
+}
 function applyLang(){
   const t=I18N[currentLang];
-  document.querySelectorAll('[data-i18n]').forEach(el=>{const key=el.getAttribute('data-i18n');if(t[key])el.textContent=t[key];});
-  document.querySelectorAll('[data-i18n-placeholder]').forEach(el=>{const key=el.getAttribute('data-i18n-placeholder');if(t[key])el.placeholder=t[key];});
-  document.querySelectorAll('[data-i18n-opt]').forEach(el=>{const key=el.getAttribute('data-i18n-opt');if(t[key])el.textContent=t[key];});
+  document.querySelectorAll('[data-i18n]').forEach(el=>{
+    const key=el.getAttribute('data-i18n');
+    if(t[key])el.textContent=t[key];
+  });
   if(ct&&T[ct]){
     document.getElementById('tt').textContent=T[ct].title[currentLang];
     document.getElementById('td').textContent=T[ct].desc[currentLang];
-    const ph=ct==='json'?I18N[currentLang].placeholder_json:ct==='regex'?I18N[currentLang].placeholder_regex:I18N[currentLang].placeholder_default;document.getElementById('input').placeholder=ph;
-    // Rebuild inOps HTML to update language-specific labels
     const ops=document.getElementById('inOps');
     let h='';
-    if(ct==='regex') h=`<div class="or"><input type="text" id="pattern" class="wid" data-i18n-placeholder="regex_pattern_ph" placeholder="${t['regex_pattern_ph']}"></div><div class="or"><label><input type="checkbox" id="flagg" checked data-i18n-opt="regex_flag_g">${t['regex_flag_g']}</label><label style="margin-left:10px"><input type="checkbox" id="flagi" data-i18n-opt="regex_flag_i">${t['regex_flag_i']}</label></div>`;
+    if(ct==='regex') h=`<div class="or"><input type="text" id="pattern" class="wid" placeholder="${t.regex_pattern_ph}"></div><div class="or"><label><input type="checkbox" id="flagg" checked>${t.regex_flag_g}</label><label style="margin-left:10px"><input type="checkbox" id="flagi">${t.regex_flag_i}</label></div>`;
     if(ct==='hash') h=`<div class="or"><select id="htype"><option value="md5">MD5</option><option value="sha1">SHA1</option><option value="sha256">SHA-256</option></select></div>`;
-    if(ct==='uuid') h=`<div class="or"><button class="btn btn-p" onclick="genUUID()" data-i18n="uuid_generate">${t['uuid_generate']}</button></div>`;
-    if(ct==='diff') h=`<div class="or"><textarea id="input2" data-i18n-placeholder="diff_input2_ph" placeholder="${t['diff_input2_ph']}" style="min-height:100px"></textarea></div>`;
+    if(ct==='uuid') h=`<div class="or"><button class="btn btn-p" onclick="genUUID()">${t.uuid_generate}</button></div>`;
+    if(ct==='diff') h=`<div class="or"><textarea id="input2" placeholder="${t.diff_input2_ph}" style="min-height:100px"></textarea></div>`;
     ops.innerHTML=h;
+    const ph=ct==='json'?t.placeholder_json:ct==='regex'?t.placeholder_regex:t.placeholder_default;
+    document.getElementById('input').placeholder=ph;
   }
 }
-(function initLang(){const saved=localStorage.getItem('codezone_lang');if(saved==='en'||saved==='zh')currentLang=saved;document.getElementById('langBtn').textContent=currentLang==='zh'?'🌐 EN':'🌐 中';applyLang();})();
+(function initLang(){
+  const saved=localStorage.getItem('codezone_lang');
+  if(saved==='en'||saved==='zh')currentLang=saved;
+  document.getElementById('langBtn').textContent=currentLang==='zh'?'🌐 EN':'🌐 中';
+  applyLang();
+})();
 </script>
 </body>
 </html>
